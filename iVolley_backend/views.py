@@ -67,16 +67,21 @@ def get_post_url(init_dir, post_base):
 
 
 allow_stu = ["21373267"]
-allow_tea = ["18111004", "18111005", "07363", "06643", "08865", "09424", "11070"]
 sha256 = 'pbkdf2_sha256$720000$op10xq6pwHqWVtWSyVhluL$AaBnSG2Pr6fJmojAX85wUjpPMyZ7EgBlJiBCW42rKnM='
 
 
 # 盛春媛：07363；陆科：06643；黎宇翔：08865；杨昊：09424；王晨：11070
 
 def get_role(id):
+    allow_tea = []
+    teachers = Teacher.objects.all()
+    for teacher in teachers:
+        allow_tea.append(teacher.username)
+    print(allow_tea)
     if id in allow_stu:
         return 0
     elif id in allow_tea:
+        print("id in allow tea")
         return 1
     else:
         return -1  # 无权限
@@ -125,6 +130,11 @@ def login(request):
         role = request.POST.get('role')
         print(f"role:{role}")
         print(f"id:{id}")
+        allow_tea = []
+        teachers = Teacher.objects.all()
+        for teacher in teachers:
+            allow_tea.append(teacher.username)
+        print(allow_tea)
         if role == "1" and id not in allow_tea:
             return JsonResponse({"status": 400})  # 学生登老师
         if role == "0" and id in allow_tea:
@@ -1782,6 +1792,11 @@ def TaskFinished(request):
 
 
 def tea_reset_pwd(request):
+    allow_tea = []
+    teachers = Teacher.objects.all()
+    for teacher in teachers:
+        allow_tea.append(teacher.username)
+    print(allow_tea)
     teacher_id = request.session.get('username')
     student_id = request.POST.get('id')
     if teacher_id in allow_tea:

@@ -193,6 +193,7 @@ def register(request):
 def login(request):
     code = request.POST.get('code')
     openid = get_wx_open_id(code)
+    print(f"login - {openid}")
     try:
         user = User.objects.get(username=openid)
         dj_login(request, user)  # 登录用户

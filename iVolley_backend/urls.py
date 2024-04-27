@@ -55,8 +55,8 @@ urlpatterns = [
     path("remote_dispatch/", RemoteDispatch),
     path("task_finish/", TaskFinished),
     path("tea_reset_pwd/", tea_reset_pwd),
-    path("wx_login/", wx_login),
-    path("test/", test_openid)
+    # path("wx_login/", wx_login),
+    # path("test/", test_openid)
     # path("add_semester/", add_semester), 多余功能，直接在创建班级的时候默认创建学期就好
     # path("get_SSC/", get_SSC), 还不知道这个要干啥
     # path("add_tag/", add_tag),

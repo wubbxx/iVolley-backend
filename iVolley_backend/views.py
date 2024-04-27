@@ -104,7 +104,9 @@ def get_wx_open_id(code):
     secret = "ca3e34b59dbb72c510b504499afc549a"
     url = f'https://api.weixin.qq.com/sns/jscode2session?appid={appid}&secret={secret}&js_code={code}&grant_type=authorization_code'
     response = requests.get(url)
-    return response.json().get('openid')
+    data = response.json()
+    print(f"get wx id {data}")
+    return data.get('openid')
 
 
 # 盛春媛：07363；陆科：06643；黎宇翔：08865；杨昊：09424；王晨：11070
@@ -150,15 +152,13 @@ def register(request):
         else:
             print("err!!!!")
             return None
-    code = request.POST.get('code')
-    open_id = get_wx_open_id(code)
+    open_id = request.POST.get('openid')
     user_id = request.POST.get('id')
     role = request.POST.get('role')
     first_name = request.POST.get('name')
     school = request.POST.get('school')
-    password = request.POST.get('password')
-    invitation_code = request.POST.get('invitation_code')
-    print(f"code: {code}")
+    password = request.POST.get('password', None)
+    invitation_code = request.POST.get('invitation_code', None)
     print(f"open_id: {open_id}")
     print(f"user_id: {user_id}")
     print(f"role: {role}")
@@ -200,9 +200,9 @@ def login(request):
         role = "0"
         if user.is_staff:
             role = "1"
-        return JsonResponse({"status": 200, "role": role})
+        return JsonResponse({"status": 200, "role": role, "openid": openid})
     except ObjectDoesNotExist:
-        return JsonResponse({"status": 400, "role": "-1"})
+        return JsonResponse({"status": 400, "role": "-1", "openid": openid})
 
 
 def logout(request):

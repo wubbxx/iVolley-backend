@@ -5,6 +5,7 @@ urlpatterns = [
     path("register/", register),  # 测试完成
     path("login/", login),  # 测试完成
     path("logout/", logout),  # 测试完成
+    path("modify_personal_profile/", modify_personal_profile),
     path("get_personal_profile/", get_personal_profile),  # 测试完成
     path("upload_profile/", upload_profile),  # 测试完成
     path("change_password/", change_password),  # 测试完成

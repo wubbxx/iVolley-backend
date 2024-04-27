@@ -283,6 +283,7 @@ def get_personal_profile(request):
                 'user_id': res.last_name,
                 'name': res.first_name,
                 'class_name': res_class_name,
+                'school': res.email,
                 'major': res_major,
                 'role': 1 if res.is_staff is True else 0,
                 'URL': "https://ivolley.cn:8443/post_img/teacher.jpg",
@@ -1913,3 +1914,23 @@ def stu_attend_class(request):
 
     except ObjectDoesNotExist:
         return JsonResponse({"status": 400, "msg": "没有班级"})
+
+
+def modify_personal_profile(request):
+    id = request.session.get("username")
+    name = request.POST.get("name")
+    user_id = request.POST.get("user_id")
+    school = request.POST.get("school")
+
+    user = User.objects.get(username=id)
+    if name != "":
+        user.first_name = name
+    if user_id != "":
+        user.last_name = user_id
+    if school != "":
+        user.email = school
+
+    user.save()
+
+    return JsonResponse({"status": 200})
+

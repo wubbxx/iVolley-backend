@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import json
 
-import random
+from iVolley_backend.utils import *
 from django.contrib.auth import logout as dj_logout, login as dj_login
 from django.forms import model_to_dict, CharField, BooleanField
 from django.shortcuts import get_object_or_404
@@ -98,7 +98,7 @@ sha256 = 'pbkdf2_sha256$720000$op10xq6pwHqWVtWSyVhluL$AaBnSG2Pr6fJmojAX85wUjpPMy
 # 盛春媛：07363；陆科：06643；黎宇翔：08865；杨昊：09424；王晨：11070
 
 def get_role(id):
-    allow_tea = []
+    allow_tea = ["07363"]
     teachers = Teacher.objects.all()
     for teacher in teachers:
         allow_tea.append(teacher.username)
@@ -161,14 +161,14 @@ def login(request):
             allow_tea.append(teacher.username)
         print(allow_tea)
         if role == "1" and id not in allow_tea:
-            return JsonResponse({"status": 400})  # 学生登老师
+            return JsonResponse({"status": 400, "msg": "学生登录老师"})  # 学生登老师
         if role == "0" and id in allow_tea:
-            return JsonResponse({"status": 400})  # 老师登学生
+            return JsonResponse({"status": 400, "msg": "老师登录学生"})  # 老师登学生
         password = request.POST.get('password')
         try:
             user = User.objects.get(username=id)
         except:
-            return JsonResponse({"status": 400})
+            return JsonResponse({"status": 400, "msg":"找不到用户"})
         if role == "0":
             try:
                 stu = Student.objects.get(username=id)
@@ -179,7 +179,7 @@ def login(request):
                 else:
                     response = JsonResponse({"status": 300})  # 密码错误
             except:
-                response = JsonResponse({"status": 400})  # 未注册
+                response = JsonResponse({"status": 400, "msg": "学生未注册"})  # 未注册
         elif role == "1":
             try:
                 print(id)
@@ -191,9 +191,9 @@ def login(request):
                 else:
                     response = JsonResponse({"status": 300})  # 密码错误
             except:
-                response = JsonResponse({"status": 400})  # 未注册
+                response = JsonResponse({"status": 400, "msg": "教师未注册"})  # 未注册
         else:
-            response = JsonResponse({"status": 400})  # 未注册
+            response = JsonResponse({"status": 400, "msg": "非法用户"})  # 未注册
     else:
         response = JsonResponse({"status": 500})  # 非POST请求
     return response
@@ -683,53 +683,91 @@ def parse_excel(attendance_sheet, student_ids, student_names, student_majors):
     return [course_number, course_name, teacher, start_time, " end_time", "weekday"]
 
 
+# def create_class(request):
+#     user_id = request.session.get('username')
+#     try:
+#         semester = "2024_spring"
+#         if not Semester.objects.filter(semester_name=semester).exists():
+#             Semester.objects.create(
+#                 semester_name=semester
+#             )
+#         semobj = Semester.objects.get(semester_name=semester)
+#         teacher = Teacher.objects.get(username=user_id)
+#
+#         attendance_sheet = request.FILES.get("attendance_sheet")
+#         student_ids = []
+#         student_names = []
+#         student_majors = []
+#         [none, course_name, none, start_time, end_time, weekday] = parse_excel(attendance_sheet, student_ids,
+#                                                                                student_names, student_majors)
+#         class_instance = Class.objects.create(
+#             semester=semobj,
+#             teacher_ID=teacher,
+#             sport="排球",
+#             name=course_name,
+#             start_time=str(start_time),
+#             end_time=str(end_time)
+#         )
+#
+#         for student_id, student_name in zip(student_ids, student_names):
+#             # 检查数据库中是否已存在该学号对应的 Student 对象
+#             existing_student = Student.objects.filter(username=student_id).first()
+#             if not existing_student:
+#                 Student.objects.create_user(username=student_id, password='666666', first_name=student_name,
+#                                             major='默认专业', pwd="666666")
+#                 print(f"Student {student_id} created with name {student_name}.")
+#             else:
+#                 print(f"Student {student_id} already exists.")
+#
+#         students_to_add = Student.objects.filter(username__in=student_ids)
+#         for student in students_to_add:
+#             student_class_instance = Student_class(class_ID=class_instance, student_ID=student)
+#             student_class_instance.save()
+#
+#         teacher_class_instance = Teacher_class(teacher_ID=teacher, class_ID=class_instance)
+#         teacher_class_instance.save()
+#
+#         return JsonResponse({"status": 200})
+#     except ObjectDoesNotExist as e:
+#         return JsonResponse({"status": 400, "msg": e})
+
 def create_class(request):
     user_id = request.session.get('username')
+    school = request.POST.get('school')
+    name = request.POST.get('name')
+    start_time = request.POST.get('start_time')
+
     try:
         semester = "2024_spring"
         if not Semester.objects.filter(semester_name=semester).exists():
-            Semester.objects.create(
-                semester_name=semester
-            )
+            Semester.objects.create(semester_name=semester)
         semobj = Semester.objects.get(semester_name=semester)
         teacher = Teacher.objects.get(username=user_id)
 
-        attendance_sheet = request.FILES.get("attendance_sheet")
-        student_ids = []
-        student_names = []
-        student_majors = []
-        [none, course_name, none, start_time, end_time, weekday] = parse_excel(attendance_sheet, student_ids,
-                                                                               student_names, student_majors)
+        while True:
+            invite_code = generate_random_str()
+            try:
+                Class.objects.get(end_time=invite_code)
+            except ObjectDoesNotExist:
+                break
+
         class_instance = Class.objects.create(
-            semester=semobj,
-            teacher_ID=teacher,
-            sport="排球",
-            name=course_name,
-            start_time=str(start_time),
-            end_time=str(end_time)
-        )
-
-        for student_id, student_name in zip(student_ids, student_names):
-            # 检查数据库中是否已存在该学号对应的 Student 对象
-            existing_student = Student.objects.filter(username=student_id).first()
-            if not existing_student:
-                Student.objects.create_user(username=student_id, password='666666', first_name=student_name,
-                                            major='默认专业', pwd="666666")
-                print(f"Student {student_id} created with name {student_name}.")
-            else:
-                print(f"Student {student_id} already exists.")
-
-        students_to_add = Student.objects.filter(username__in=student_ids)
-        for student in students_to_add:
-            student_class_instance = Student_class(class_ID=class_instance, student_ID=student)
-            student_class_instance.save()
+                    semester=semobj,
+                    teacher_ID=teacher,
+                    sport=school,
+                    name=name,
+                    start_time=start_time,
+                    end_time=invite_code
+                )
 
         teacher_class_instance = Teacher_class(teacher_ID=teacher, class_ID=class_instance)
         teacher_class_instance.save()
 
-        return JsonResponse({"status": 200})
+        return JsonResponse({"status": 200, "invite_code": invite_code})
+
     except ObjectDoesNotExist as e:
         return JsonResponse({"status": 400, "msg": e})
+
 
 
 def tea2classes(request):
@@ -1831,3 +1869,40 @@ def tea_reset_pwd(request):
     else:
         return JsonResponse({"status": 400})
     return JsonResponse({"status": 200})
+
+
+def stuget_class_profile(request):
+    invite_code = request.POST.get('invite_code')
+    try:
+        classe = Class.objects.get(end_time=invite_code)
+        teacher_name = Teacher.objects.get(id=classe.teacher_ID.id).first_name
+
+        return JsonResponse({
+            "status": 200,
+            "class_name": classe.name,
+            "teacher_name": teacher_name,
+            "school_id": classe.sport,
+            "start_time": classe.start_time
+        })
+    except ObjectDoesNotExist:
+        return JsonResponse({"status": 400, "msg": "没有班级"})
+
+
+def stu_attend_class(request):
+    username = request.session.get('username')
+    invite_code = request.POST.get('invite_code')
+
+    try:
+        classe = Class.objects.get(end_time=invite_code)
+        stu = Student.objects.get(username=username)
+
+        try:
+            Student_class.objects.get(student_ID=stu, class_ID=classe)
+            return JsonResponse({"status": 400, "msg":"重复加入班级"})
+        except ObjectDoesNotExist:
+            student_class_instance = Student_class(class_ID=classe, student_ID=stu)
+            student_class_instance.save()
+            return JsonResponse({"status": 200})
+
+    except ObjectDoesNotExist:
+        return JsonResponse({"status": 400, "msg": "没有班级"})

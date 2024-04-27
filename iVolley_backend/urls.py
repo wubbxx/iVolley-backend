@@ -17,15 +17,17 @@ urlpatterns = [
     path("get_img_profile/", get_img_profile),
     path("del_img/", delete_img),
     path("del_video/", delete_video),
+    path("stuget_class_profile/", stuget_class_profile),
+    path("stu_attend_class/", stu_attend_class),
     # ---------- 学生端 ↑ ------ 教师端 ↓ ---------#
-    path("create_class/", create_class),  # 测试完成
+    path("create_class/", create_class),  # 测试完成    v0.1版本
     path("tea2classes/", tea2classes),  # 测试完成
     path("teacher_change_class_name/", teacher_change_class_name),  # 11-28新增
     path("class2students/", class2students),  # 测试完成
     path("tea2students/", tea2students),  # 测试完成
     path("tea2stu2videos/", tea2stu2videos),
     path("tea2stu2imgs/", tea2stu2imgs),
-    path("add_student/", add_student),
+    # path("add_student/", add_student), v0.1版本 废弃
     path("teacher_add_videofeedback/", teacher_add_videofeedback),
     path("teacher_add_imgfeedback/", teacher_add_imgfeedback),
     path("teacher_add_material/", teacher_add_material),

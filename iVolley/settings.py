@@ -84,15 +84,17 @@ ASGI_APPLICATION = 'iVolley.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'HOST': '172.17.0.1', # docker IP
+        # 'HOST': '172.17.0.1', # docker IP
         # 'HOST': '106.39.42.222',
-        'PORT': '3307',
+        'HOST': '127.0.0.1',
+        # 'PORT': '3307',
+        'PORT': '3306',
         #'USER': 'root',
         #"PASSWORD": '030110ABc',
         'USER': 'root',
-        'NAME': 'iVolley',
+        'NAME': 'ivolleyball',
         # 'USER': 'liuyuheng',
-        'PASSWORD': '123456',
+        'PASSWORD': '20021023',
         # 'NAME': 'iVolley',
         'OPTIONS': {'charset': 'utf8'}
     }

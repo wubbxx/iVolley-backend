@@ -61,6 +61,12 @@ def index(request):
     return render(request, 'index.html')
 
 
+def test_openid(request):
+    openid = request.session.get('openid')
+    print(openid)
+    return JsonResponse({"open": openid})
+
+
 def wx_login(request):
     code = request.POST.get('code')
     print(f"code: {code}")
@@ -73,18 +79,16 @@ def wx_login(request):
     print(f"data = {data}")
     session_key = data.get('session_key')
     openid = data.get('openid')
-    url = f'https://api.weixin.qq.com/sns/userinfo?access_token={session_key}&openid={openid}'
-    response = requests.get(url)
-    response.encoding = 'utf-8'  # 设置响应内容的编码为UTF-8
-    user_info = response.json()
-    backend = 'django.contrib.auth.backends.ModelBackend'
+    # url = f'https://api.weixin.qq.com/sns/userinfo?access_token={session_key}&openid={openid}'
+    # response = requests.get(url)
+    # response.encoding = 'utf-8'  # 设置响应内容的编码为UTF-8
+    # user_info = response.json()
+    # backend = 'django.contrib.auth.backends.ModelBackend'
     user = User.objects.get(username='21371476')
-    user.backend = backend  # 设置用户实例的后端属性
-    print(request.session.values())
-    dj_login(request, user, backend=backend)  # 登录用户，传入backend参数
-    request.session['username'] = "21371476"
-    print(request.session.values())
-    return JsonResponse({"status": 200, "openid": openid, "session_key" : session_key})
+    dj_login(request, user)  # 登录用户，传入backend参数
+    request.session['openid'] = openid
+    return JsonResponse({"status": 200})
+
 
 def get_post_url(init_dir, post_base):
     name = init_dir.rsplit("/")[-1]
@@ -93,6 +97,14 @@ def get_post_url(init_dir, post_base):
 
 allow_stu = ["21373267"]
 sha256 = 'pbkdf2_sha256$720000$op10xq6pwHqWVtWSyVhluL$AaBnSG2Pr6fJmojAX85wUjpPMyZ7EgBlJiBCW42rKnM='
+
+
+def get_wx_open_id(code):
+    appid = "wx6251a5ac450a38c0"
+    secret = "ca3e34b59dbb72c510b504499afc549a"
+    url = f'https://api.weixin.qq.com/sns/jscode2session?appid={appid}&secret={secret}&js_code={code}&grant_type=authorization_code'
+    response = requests.get(url)
+    return response.json().get('openid')
 
 
 # 盛春媛：07363；陆科：06643；黎宇翔：08865；杨昊：09424；王晨：11070
@@ -111,92 +123,73 @@ def get_role(id):
     else:
         return -1  # 无权限
 
-
+invitation_codes = ["1", "2", "3"]
 def register(request):
-    if request.method != "POST":
-        return JsonResponse({"status": 400, "error": 403})  # 非POST请求
-
-    print(request.POST)
-    password = request.POST.get('password')
-
-    id = request.POST.get('id')
+    def regBrandNew(role, open_id, user_id, first_name, school, invitation_code):
+        if role == "1":
+            if invitation_code in invitation_codes:
+                teacher = Teacher.objects.create_user(
+                    username=open_id,
+                    first_name=first_name,
+                    last_name=user_id,
+                    is_staff=1,  # 0->学生 1->老师
+                    email=school
+                )
+                return teacher
+            return None
+        elif role == "0":
+            student = Student.objects.create_user(
+                username=open_id,
+                first_name=first_name,
+                last_name=user_id,
+                is_staff=0,
+                email=school
+            )
+            return student
+        else:
+            return None
+    code = request.POST.get('code')
+    open_id = get_wx_open_id(code)
+    user_id = request.POST.get('id')
+    role = request.POST.get('role')
     first_name = request.POST.get('name')
-    res = User.objects.filter(username=id).count()
-    if res == 0:
-        role = get_role(id)
-        if role == -1:
-            response = JsonResponse({"status": 400, "error": 401})  # 无权限注册
-        elif role == 0:
-            Student.objects.create_user(
-                pwd=password,
-                username=id,
-                password=password,
-                first_name=first_name,
-                is_staff=0  # 0->学生 1->老师
-            )
-            response = JsonResponse({"status": 200})
-        elif role == 1:
-            Teacher.objects.create_user(
-                pwd=password,
-                username=id,
-                password=password,
-                first_name=first_name,
-                is_staff=1  # 0->学生 1->老师
-            )
-            response = JsonResponse({"status": 200})
+    school = request.POST.get('school')
+    password = request.POST.get('password')
+    invitation_code = request.POST.get('invitation_code')
+    if school == "1":
+        try:
+            user = Student.objects.get(username=user_id)
+            if user.pwd == password:
+                user.username = open_id
+                user.save()
+                dj_login(request, user)
+                request.session['username'] = open_id
+                return JsonResponse({"status": 200})
+            else:
+                if password is None:
+                    return JsonResponse({"status": 500})
+                return JsonResponse({"status": 400})
+        except ObjectDoesNotExist:
+            res = regBrandNew(role, open_id, user_id, first_name, school, invitation_code)
+            if res is None:
+                return JsonResponse({"status": 600})
+            return JsonResponse({"status": 300})
     else:
-        response = JsonResponse({"status": 400, "error": 402})  # 学工号重复
-    return response
-
+        res = regBrandNew(role, open_id, user_id, first_name, school, invitation_code)
+        if res is None:
+            return JsonResponse({"status": 600})
+        return JsonResponse({"status": 300})
 
 def login(request):
-    if request.method == "POST":
-        id = request.POST.get('id')
-        role = request.POST.get('role')
-        print(f"role:{role}")
-        print(f"id:{id}")
-        allow_tea = []
-        teachers = Teacher.objects.all()
-        for teacher in teachers:
-            allow_tea.append(teacher.username)
-        print(allow_tea)
-        if role == "1" and id not in allow_tea:
-            return JsonResponse({"status": 400})  # 学生登老师
-        if role == "0" and id in allow_tea:
-            return JsonResponse({"status": 400})  # 老师登学生
-        password = request.POST.get('password')
-        try:
-            user = User.objects.get(username=id)
-        except:
-            return JsonResponse({"status": 400})
-        if role == "0":
-            try:
-                stu = Student.objects.get(username=id)
-                if stu.pwd == password:
-                    dj_login(request, user)
-                    request.session['username'] = id
-                    response = JsonResponse({"status": 200})  # 登录成功
-                else:
-                    response = JsonResponse({"status": 300})  # 密码错误
-            except:
-                response = JsonResponse({"status": 400})  # 未注册
-        elif role == "1":
-            try:
-                print(id)
-                tea = Teacher.objects.get(username=id)
-                if tea.pwd == password:
-                    dj_login(request, user)
-                    request.session['username'] = id
-                    response = JsonResponse({"status": 200})  # 登录成功
-                else:
-                    response = JsonResponse({"status": 300})  # 密码错误
-            except:
-                response = JsonResponse({"status": 400})  # 未注册
-        else:
-            response = JsonResponse({"status": 400})  # 未注册
-    else:
-        response = JsonResponse({"status": 500})  # 非POST请求
-    return response
+    code = request.POST.get('code')
+    openid = get_wx_open_id(code)
+    try:
+        user = User.objects.get(username=openid)
+        dj_login(request, user)  # 登录用户
+        request.session['username'] = openid
+        return JsonResponse({"status": 200})
+    except ObjectDoesNotExist:
+        return JsonResponse({"status": 400})
 
 
 def logout(request):
@@ -1327,6 +1320,7 @@ def stu2hw2profile(request):
 
 def stu2notice(request):
     notice_list = []
+    open_id = request.headers.get('')
     student_id = request.session.get("username")
     if get_role(student_id) == 1:
         class_id = request.POST.get('class_id')

@@ -19,7 +19,7 @@ from django.views.decorators.csrf import csrf_exempt
 from iVolley import settings
 from iVolley_backend.models import *
 from iVolley_backend.tasks import openpose
-
+import requests
 from math import radians, sin, cos, sqrt, atan2
 
 
@@ -59,6 +59,27 @@ def rename_file(fileName):
 
 def index(request):
     return render(request, 'index.html')
+
+
+def wx_login(request):
+    code = request.POST.get('code')
+    aaa = request.POST.get('aaa')
+    print(aaa)
+    print(f"{code}: code")
+    # 利用code获取access_token
+    appid = "wx6251a5ac450a38c0"
+    secret = "ca3e34b59dbb72c510b504499afc549a"
+    url = f'https://api.weixin.qq.com/sns/oauth2/access_token?appid={appid}&secret={secret}&code={code}&grant_type=authorization_code'
+    response = requests.get(url)
+    data = response.json()
+    access_token = data.get('access_token')
+    openid = data.get('openid')
+    url = f'https://api.weixin.qq.com/sns/userinfo?access_token={access_token}&openid={openid}'
+    response = requests.get(url)
+    print(access_token)
+    print(openid)
+    print(response)
+    return JsonResponse({"status": 200, "response": "123"})
 
 
 def get_post_url(init_dir, post_base):

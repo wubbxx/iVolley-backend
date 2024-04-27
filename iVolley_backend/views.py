@@ -12,10 +12,10 @@ from django.contrib.auth import logout as dj_logout, login as dj_login
 from django.forms import model_to_dict, CharField, BooleanField
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-
+from urllib.parse import quote
 from iVolley import settings
 from iVolley_backend.models import *
 from iVolley_backend.tasks import openpose
@@ -63,24 +63,28 @@ def index(request):
 
 def wx_login(request):
     code = request.POST.get('code')
-    aaa = request.POST.get('aaa')
-    print(aaa)
-    print(f"{code}: code")
+    print(f"code: {code}")
     # 利用code获取access_token
     appid = "wx6251a5ac450a38c0"
     secret = "ca3e34b59dbb72c510b504499afc549a"
-    url = f'https://api.weixin.qq.com/sns/oauth2/access_token?appid={appid}&secret={secret}&code={code}&grant_type=authorization_code'
+    url = f'https://api.weixin.qq.com/sns/jscode2session?appid={appid}&secret={secret}&js_code={code}&grant_type=authorization_code'
     response = requests.get(url)
     data = response.json()
-    access_token = data.get('access_token')
+    print(f"data = {data}")
+    session_key = data.get('session_key')
     openid = data.get('openid')
-    url = f'https://api.weixin.qq.com/sns/userinfo?access_token={access_token}&openid={openid}'
+    url = f'https://api.weixin.qq.com/sns/userinfo?access_token={session_key}&openid={openid}'
     response = requests.get(url)
-    print(access_token)
-    print(openid)
-    print(response)
-    return JsonResponse({"status": 200, "response": "123"})
-
+    response.encoding = 'utf-8'  # 设置响应内容的编码为UTF-8
+    user_info = response.json()
+    backend = 'django.contrib.auth.backends.ModelBackend'
+    user = User.objects.get(username='21371476')
+    user.backend = backend  # 设置用户实例的后端属性
+    print(request.session.values())
+    dj_login(request, user, backend=backend)  # 登录用户，传入backend参数
+    request.session['username'] = "21371476"
+    print(request.session.values())
+    return JsonResponse({"status": 200, "openid": openid, "session_key" : session_key})
 
 def get_post_url(init_dir, post_base):
     name = init_dir.rsplit("/")[-1]

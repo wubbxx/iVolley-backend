@@ -208,6 +208,11 @@ def login(request):
 
 
 def logout(request):
+    openid = request.session.get('username')
+    out_openid = "delete_" + openid
+    user = User.objects.get(username=openid)
+    user.username = out_openid
+    user.save()
     dj_logout(request=request)
     response = JsonResponse({
         'status': 200
@@ -272,7 +277,10 @@ def get_personal_profile(request):
     res_major = ""
     if res.is_staff == 0:
         stu_class = Student_class.objects.filter(student_ID=res).first()
-        res_class_name = stu_class.class_ID.name
+        if stu_class:
+            res_class_name = stu_class.class_ID.name
+        else:
+            res_class_name = "暂未加入班级"
 
     if res is None:
         response = JsonResponse({"status": 400})
@@ -283,7 +291,7 @@ def get_personal_profile(request):
                 'user_id': res.last_name,
                 'name': res.first_name,
                 'class_name': res_class_name,
-                'school': res.email,
+                'school': settings.school_dic.get(int(res.email)),
                 'major': res_major,
                 'role': 1 if res.is_staff is True else 0,
                 'URL': "https://ivolley.cn:8443/post_img/teacher.jpg",

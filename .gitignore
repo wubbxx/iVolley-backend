@@ -1,0 +1,8 @@
+*.pyc
+.idea/
+*.DS_Store
+migrations/
+celeryWorker.txt
+iVolleylog.txt
+server_log.txt
+=2.0.1

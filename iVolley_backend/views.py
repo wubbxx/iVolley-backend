@@ -1,4 +1,3 @@
-#dslkjfalskdfjlaskdjf
 import base64
 import os
 import re
@@ -1914,8 +1913,3 @@ def stu_attend_class(request):
 
     except ObjectDoesNotExist:
         return JsonResponse({"status": 400, "msg": "没有班级"})
-
-
-
-
-    #ajsdkljalksj

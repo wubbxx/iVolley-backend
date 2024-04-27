@@ -1914,3 +1914,8 @@ def stu_attend_class(request):
 
     except ObjectDoesNotExist:
         return JsonResponse({"status": 400, "msg": "没有班级"})
+
+
+
+
+    #ajsdkljalksj

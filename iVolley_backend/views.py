@@ -126,13 +126,14 @@ def get_role(id):
 invitation_codes = ["1", "2", "3"]
 def register(request):
     def regBrandNew(role, open_id, user_id, first_name, school, invitation_code):
+        print(role)
         if role == "1":
             if invitation_code in invitation_codes:
                 teacher = Teacher.objects.create_user(
                     username=open_id,
                     first_name=first_name,
                     last_name=user_id,
-                    is_staff=1,  # 0->学生 1->老师
+                    is_staff=True,  # 0->学生 1->老师
                     email=school
                 )
                 return teacher
@@ -142,11 +143,12 @@ def register(request):
                 username=open_id,
                 first_name=first_name,
                 last_name=user_id,
-                is_staff=0,
+                is_staff=False,
                 email=school
             )
             return student
         else:
+            print("err!!!!")
             return None
     code = request.POST.get('code')
     open_id = get_wx_open_id(code)
@@ -156,7 +158,15 @@ def register(request):
     school = request.POST.get('school')
     password = request.POST.get('password')
     invitation_code = request.POST.get('invitation_code')
-    if school == "1":
+    print(f"code: {code}")
+    print(f"open_id: {open_id}")
+    print(f"user_id: {user_id}")
+    print(f"role: {role}")
+    print(f"first_name: {first_name}")
+    print(f"school: {school}")
+    print(f"password: {password}")
+    print(f"invitation_code: {invitation_code}")
+    if school == "0":
         try:
             user = Student.objects.get(username=user_id)
             if user.pwd == password:
@@ -187,9 +197,12 @@ def login(request):
         user = User.objects.get(username=openid)
         dj_login(request, user)  # 登录用户
         request.session['username'] = openid
-        return JsonResponse({"status": 200})
+        role = "0"
+        if user.is_staff:
+            role = "1"
+        return JsonResponse({"status": 200, "role": role})
     except ObjectDoesNotExist:
-        return JsonResponse({"status": 400})
+        return JsonResponse({"status": 400, "role": "-1"})
 
 
 def logout(request):
@@ -200,7 +213,7 @@ def logout(request):
     return response
 
 
-def change_password(request):
+def change_password(request): # 没用
     user_id = request.session.get('username')
     user = User.objects.get(username=user_id)
     old_pwd = request.POST.get('old_pwd')
@@ -265,7 +278,7 @@ def get_personal_profile(request):
         response = JsonResponse({
             'status': 200,
             'profile': {
-                'user_id': res.username,
+                'user_id': res.last_name,
                 'name': res.first_name,
                 'class_name': res_class_name,
                 'major': res_major,
@@ -309,8 +322,8 @@ def storage_video(request):
         return JsonResponse({"status": 401})
     # 重新定义视频名
     suffix = videoFile.name.split('.')[-1]
-    init_name = f"{student.first_name}-{student_id}-{(datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')}.{suffix}"
-    video_name = f"{student_id}_{(datetime.now() + timedelta(hours=8)).strftime('%Y_%m_%d_%H_%M_%S')}.{suffix}"
+    init_name = f"{student.first_name}-{student.last_name}-{(datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')}.{suffix}"
+    video_name = f"{student.last_name}_{(datetime.now() + timedelta(hours=8)).strftime('%Y_%m_%d_%H_%M_%S')}.{suffix}"
     # 存储图片在服务器本地
     dir = settings.POST_VIDEO_DIR + video_name
     destination = open(dir, 'wb+')
@@ -351,7 +364,7 @@ def storage_img(request):
         return JsonResponse({"status": 400, "error": "请求错误"})
 
     user_id = request.session.get('username')
-    student_ID = Student.objects.get(username=user_id)
+    student = Student.objects.get(username=user_id)
     homework_id = int(request.POST.get('homework_id'))
     homework = Homework.objects.get(ID=homework_id)
     tag = request.POST.get('tag')
@@ -367,7 +380,7 @@ def storage_img(request):
         return JsonResponse({"status": 401})  # 文件大小超出限制
     print(imageFile)
     suffix = imageFile.name.split('.')[-1]
-    img_name = f"{student_ID.first_name}-{user_id}-{(datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d_%H_%M_%S')}.{suffix}"
+    img_name = f"{student.first_name}-{student.last_name}-{(datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d_%H_%M_%S')}.{suffix}"
     # img_name = f"{user_id}_{(datetime.now() + timedelta(hours=8)).strftime('%Y_%m_%d_%H_%M_%S')}.{suffix}"
     dir = settings.POST_IMG_DIR + img_name
     destination = open(dir, 'wb+')
@@ -377,7 +390,7 @@ def storage_img(request):
     print("????")
     print(f"homework.ID{homework.ID}")
     image = Image.objects.create(  # 写数据库
-        student_ID=student_ID,
+        student_ID=student,
         homework_ID=homework,
         URL=dir,
         AI_status=False,
@@ -499,11 +512,10 @@ def stu2imgs(request):
 
 def get_video_profile(request):
     user_id = request.session.get('username')
+    user = User.objects.get(username=user_id)
     video_ID = request.POST.get('video_id')
-    print(video_ID)
-    print(user_id)
     video = Video.objects.get(ID=video_ID)
-    if get_role(user_id) == 1:
+    if user.is_staff:
         teacher = Teacher.objects.get(username=user_id)
         teacher_read_video = TeacherRVideo.objects.get(teacher_ID=teacher, video_ID=video)
         teacher_read_video.read = "1"

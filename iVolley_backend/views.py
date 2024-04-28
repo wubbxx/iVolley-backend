@@ -1,12 +1,10 @@
 import base64
 import os
-import re
 import time
 from datetime import datetime, timedelta
 
 import pandas as pd
-import json
-
+import re
 from iVolley_backend.utils import *
 import random
 from django.contrib.auth import logout as dj_logout, login as dj_login
@@ -23,6 +21,9 @@ from iVolley_backend.tasks import openpose
 import requests
 from math import radians, sin, cos, sqrt, atan2
 
+# 盛春媛：07363；陆科：06643；黎宇翔：08865；杨昊：09424；王晨：11070
+sha256 = 'pbkdf2_sha256$720000$op10xq6pwHqWVtWSyVhluL$AaBnSG2Pr6fJmojAX85wUjpPMyZ7EgBlJiBCW42rKnM='
+invitation_codes = ["BHiVolley_gy3Hb5GVk2C1R"]
 
 def is_time_difference_within_threshold(time_str1, time_str2, threshold_minutes=5):  # 默认5分钟以内签到
     # 将字符串转换为 datetime 对象
@@ -51,54 +52,13 @@ def haversine(lat1, lon1, lat2, lon2):
     return distance
 
 
-def rename_file(fileName):
-    base_name, extension = os.path.splitext(fileName)
-    fn = time.strftime('%Y-%m-%d-%H-%M-%S')  # 获取当前时间字符串
-    new_name = f"{fn}_{base_name}{extension}"
-    return new_name
-
-
 def index(request):
     return render(request, 'index.html')
-
-
-def test_openid(request):
-    openid = request.session.get('openid')
-    print(openid)
-    return JsonResponse({"open": openid})
-
-
-def wx_login(request):
-    code = request.POST.get('code')
-    print(f"code: {code}")
-    # 利用code获取access_token
-    appid = "wx6251a5ac450a38c0"
-    secret = "ca3e34b59dbb72c510b504499afc549a"
-    url = f'https://api.weixin.qq.com/sns/jscode2session?appid={appid}&secret={secret}&js_code={code}&grant_type=authorization_code'
-    response = requests.get(url)
-    data = response.json()
-    print(f"data = {data}")
-    session_key = data.get('session_key')
-    openid = data.get('openid')
-    # url = f'https://api.weixin.qq.com/sns/userinfo?access_token={session_key}&openid={openid}'
-    # response = requests.get(url)
-    # response.encoding = 'utf-8'  # 设置响应内容的编码为UTF-8
-    # user_info = response.json()
-    # backend = 'django.contrib.auth.backends.ModelBackend'
-    user = User.objects.get(username='21371476')
-    dj_login(request, user)  # 登录用户，传入backend参数
-    request.session['openid'] = openid
-    return JsonResponse({"status": 200})
 
 
 def get_post_url(init_dir, post_base):
     name = init_dir.rsplit("/")[-1]
     return post_base + name
-
-
-allow_stu = ["21373267"]
-sha256 = 'pbkdf2_sha256$720000$op10xq6pwHqWVtWSyVhluL$AaBnSG2Pr6fJmojAX85wUjpPMyZ7EgBlJiBCW42rKnM='
-
 
 def get_wx_open_id(code):
     appid = "wx6251a5ac450a38c0"
@@ -110,26 +70,9 @@ def get_wx_open_id(code):
     return data.get('openid')
 
 
-# 盛春媛：07363；陆科：06643；黎宇翔：08865；杨昊：09424；王晨：11070
 
-def get_role(id):
-    allow_tea = []
-    teachers = Teacher.objects.all()
-    for teacher in teachers:
-        allow_tea.append(teacher.last_name)
-    print(allow_tea)
-    if id in allow_stu:
-        return 0
-    elif id in allow_tea:
-        print("id in allow tea")
-        return 1
-    else:
-        return -1  # 无权限
-
-invitation_codes = ["1", "2", "3"]
 def register(request):
     def regBrandNew(role, open_id, user_id, first_name, school, invitation_code):
-        print(role)
         if role == "1":
             if invitation_code in invitation_codes:
                 teacher = Teacher.objects.create_user(
@@ -140,7 +83,6 @@ def register(request):
                     email=school
                 )
                 return teacher
-            return None
         elif role == "0":
             student = Student.objects.create_user(
                 username=open_id,
@@ -150,46 +92,69 @@ def register(request):
                 email=school
             )
             return student
-        else:
-            print("err!!!!")
-            return None
-    open_id = request.POST.get('openid')
-    user_id = request.POST.get('id')
-    role = request.POST.get('role')
-    first_name = request.POST.get('name')
-    school = request.POST.get('school')
-    password = request.POST.get('password', None)
+        return None
+    print(request.POST)
+
+    stu_user_id = request.POST.get('stu_id', None)
+    stu_name = request.POST.get('stu_name', None)
+    stu_school = request.POST.get('stu_school', None)
+    stu_password = request.POST.get('stu_password', None)
+    stu_brand_new = request.POST.get('stu_new', None)
+
+    tea_user_id = request.POST.get('tea_id', None)
+    tea_name = request.POST.get('tea_name', None)
+    tea_school = request.POST.get('tea_school', None)
+    tea_password = request.POST.get('tea_password', None)
+    tea_brand_new = request.POST.get('tea_new', None)
+
+    open_id = request.POST.get('openid', None)
     invitation_code = request.POST.get('invitation_code', None)
+    role = request.POST.get('role', None)
+
     print(f"open_id: {open_id}")
-    print(f"user_id: {user_id}")
     print(f"role: {role}")
-    print(f"first_name: {first_name}")
-    print(f"school: {school}")
-    print(f"password: {password}")
     print(f"invitation_code: {invitation_code}")
-    if school == "0":
+    if role == "0":
+        brand_new, user_id, password, school, name = stu_brand_new, stu_user_id, stu_password, stu_school, stu_name
+    else:
+        brand_new, user_id, password, school, name = tea_brand_new, tea_user_id, tea_password, tea_school, tea_name
+    pattern = r"[^0-9a-zA-Z_]"
+    if re.search(pattern, user_id):
+        return JsonResponse({"status": 900})
+
+    if brand_new == "0":
         try:
-            user = Student.objects.get(username=user_id)
-            if user.pwd == password:
+            user = User.objects.get(username=user_id)
+            if (role == "1") and user.is_staff:
+                tea = Teacher.objects.get(username=user_id)
+                old_pwd = tea.pwd
+            elif (role == "0") and (not user.is_staff):
+                stu = Student.objects.get(username=user_id)
+                old_pwd = stu.pwd
+            else:
+                return JsonResponse({"status": 600})  # 600 未发现旧账号
+            if old_pwd == password and len(old_pwd) > 0:
                 user.username = open_id
                 user.save()
                 dj_login(request, user)
                 request.session['username'] = open_id
-                return JsonResponse({"status": 200})
+                return JsonResponse({"status": 200})  # 200 绑定成功
             else:
-                if password is None:
-                    return JsonResponse({"status": 500})
-                return JsonResponse({"status": 400})
+                return JsonResponse({"status": 400})  # 400 密码错误
         except ObjectDoesNotExist:
-            res = regBrandNew(role, open_id, user_id, first_name, school, invitation_code)
+            return JsonResponse({"status": 600})  # 600 未发现旧账号
+    elif brand_new == "1":
+        try:
+            user = User.objects.get(username=user_id)
+            if user and school == "0":
+                return JsonResponse({"status": 500})  # 500 检测本账号有旧账户，请绑定
+        except ObjectDoesNotExist:
+            res = regBrandNew(role, open_id, user_id, name, school, invitation_code)
             if res is None:
-                return JsonResponse({"status": 600})
-            return JsonResponse({"status": 300})
+                return JsonResponse({"status": 700})  # 700 邀请码无效
+            return JsonResponse({"status": 300})  # 300 注册新用户成功
     else:
-        res = regBrandNew(role, open_id, user_id, first_name, school, invitation_code)
-        if res is None:
-            return JsonResponse({"status": 600})
-        return JsonResponse({"status": 300})
+        return JsonResponse({"status": 808})  # 800 未勾选新用户/老用户
 
 def login(request):
     code = request.POST.get('code')
@@ -209,9 +174,12 @@ def login(request):
 
 def logout(request):
     openid = request.session.get('username')
-    out_openid = "delete_" + openid
     user = User.objects.get(username=openid)
-    user.username = out_openid
+    count = 1
+    while count != 0:
+        openid = "delete_" + openid
+        count = User.objects.filter(username=openid).count()
+    user.username = openid
     user.save()
     dj_logout(request=request)
     response = JsonResponse({
@@ -230,8 +198,8 @@ def change_password(request): # 没用
     print(new_pwd)
     if new_pwd != new_pwd_again:
         return JsonResponse({"status": 400})
-
-    if get_role(user_id) == 1:
+    user = User.objects.get(username=user_id)
+    if user.is_staff:
         tea = Teacher.objects.get(username=user_id)
         if tea.pwd == old_pwd:
             tea.pwd = new_pwd
@@ -247,6 +215,24 @@ def change_password(request): # 没用
             return JsonResponse({"status": 200})
         else:
             return JsonResponse({"status": 401})
+
+
+def change_personal_profile(request):
+    openid = request.session.get('username')
+    last_name = request.POST.get('id')
+    first_name = request.POST.get('name')
+    school = request.POST.get('school')
+    print(f"open_id: {openid}")
+    print(f"user_id: {last_name}")
+    print(f"first_name: {first_name}")
+    print(f"school: {school}")
+    user = User.objects.get(username=openid)
+    user.last_name = last_name
+    user.first_name = first_name
+    user.email = school
+    user.save()
+
+    return JsonResponse({"status": 200})
 
 
 def upload_profile(request):
@@ -272,27 +258,34 @@ def get_personal_profile(request):
     if request.method == "GET":
         return JsonResponse({"status": 400})
     user_id = request.session.get('username')
-    res = User.objects.get(username=user_id)
+    print(user_id)
+    try:
+        res = User.objects.get(username=user_id)
+    except:
+        return JsonResponse({"status": 400})
     res_class_name = ""
-    res_major = ""
     if res.is_staff == 0:
         stu_class = Student_class.objects.filter(student_ID=res).first()
         if stu_class:
             res_class_name = stu_class.class_ID.name
         else:
-            res_class_name = "暂未加入班级"
+            res_class_name = "暂未加入班级, 点击加入"
 
     if res is None:
         response = JsonResponse({"status": 400})
     else:
+        try:
+            school = settings.school_dic.get(int(res.email))
+        except:
+            school = "暂未入学"
         response = JsonResponse({
             'status': 200,
             'profile': {
                 'user_id': res.last_name,
                 'name': res.first_name,
                 'class_name': res_class_name,
-                'school': settings.school_dic.get(int(res.email)),
-                'major': res_major,
+                'school': school,
+                'major': "res_major",
                 'role': 1 if res.is_staff is True else 0,
                 'URL': "https://ivolley.cn:8443/post_img/teacher.jpg",
             }
@@ -324,7 +317,8 @@ def storage_video(request):
     print(homework.ID)
     videoFile = request.FILES.get("video")
     allow_types = homework.type_limit.split('_')
-    allow_types = ['asf', 'avi', 'gif', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'ts', 'wmv']
+    allow_types = ['asf', 'avi', 'gif', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'ts', 'wmv',
+                    'ASF', 'AVI', 'GIF', 'M4V', 'MKV', 'MOV', 'MP4', 'MPEG', 'MPG', 'TS', 'WMV']
 
     check = check_file(videoFile, allow_types, 20)
     if check == 1:
@@ -352,7 +346,9 @@ def storage_video(request):
         init_name=init_name
     )
     if homework_id == 1:  # 自主练习
-        for teacher in Teacher.objects.all():
+        student_class = Student_class.objects.filter(student_ID=student).first()
+        if student_class:
+            teacher = student_class.class_ID.teacher_ID
             TeacherRVideo.objects.create(
                 teacher_ID=teacher,
                 video_ID=video,
@@ -408,7 +404,9 @@ def storage_img(request):
         tag=tag
     )
     if homework_id == 1:  # 自主练习
-        for teacher in Teacher.objects.all():
+        student_class = Student_class.objects.filter(student_ID=student).first()
+        if student_class:
+            teacher = student_class.class_ID.teacher_ID
             TeacherRImage.objects.create(
                 teacher_ID=teacher,
                 image_ID=image,
@@ -581,8 +579,8 @@ def get_img_profile(request):
     subtime = img.post_time
     name = img.URL.rsplit("/")[-1]
     URL = settings.POST_IMG_PATH + name
-
-    if get_role(user_id) == 1:
+    user = User.objects.get(username=user_id)
+    if user.is_staff:
         teacher = Teacher.objects.get(username=user_id)
         teacher_read_image = TeacherRImage.objects.get(teacher_ID=teacher, image_ID=img)
         teacher_read_image.read = "1"
@@ -750,16 +748,16 @@ def parse_excel(attendance_sheet, student_ids, student_names, student_majors):
 
 def create_class(request):
     user_id = request.session.get('username')
-    school = request.POST.get('school')
     name = request.POST.get('name')
     start_time = request.POST.get('start_time')
-
+    user = Teacher.objects.get(username=user_id)
+    school = settings.school_dic.get(int(user.email))
     try:
         semester = "2024_spring"
         if not Semester.objects.filter(semester_name=semester).exists():
             Semester.objects.create(semester_name=semester)
-            semobj = Semester.objects.get(semester_name=semester)
-            teacher = Teacher.objects.get(username=user_id)
+        semobj = Semester.objects.get(semester_name=semester)
+        teacher = Teacher.objects.get(username=user_id)
 
         while True:
             invite_code = generate_random_str()
@@ -768,29 +766,30 @@ def create_class(request):
             except ObjectDoesNotExist:
                 break
 
-            class_instance = Class.objects.create(
-                    semester=semobj,
-                    teacher_ID=teacher,
-                    sport=school,
-                    name=name,
-                    start_time=start_time,
-                    end_time=invite_code
-                )
+        class_instance = Class.objects.create(
+            semester=semobj,
+            teacher_ID=teacher,
+            sport=school,
+            name=name,
+            start_time=start_time,
+            end_time=invite_code
+        )
 
         teacher_class_instance = Teacher_class(teacher_ID=teacher, class_ID=class_instance)
         teacher_class_instance.save()
 
-        return JsonResponse({"status": 200, "invite_code": invite_code})
+        return JsonResponse({"status": 200, "invite_code": invite_code, "class_id": class_instance.ID})
 
     except ObjectDoesNotExist as e:
         return JsonResponse({"status": 400, "msg": e})
 
 
 def tea2classes(request):
-    print(request.method)
     try:
         user_id = request.session.get('username')
         sem = request.POST.get('sem', "2024_spring")
+        print(user_id)
+        print(sem)
         teacher = Teacher.objects.get(username=user_id)
         semester = Semester.objects.get(semester_name=sem)
         classes = Class.objects.filter(teacher_ID=teacher, semester=semester).all()
@@ -826,7 +825,8 @@ def classe_addin_list(classe, student_list):
     student_images = TeacherRImage.objects.filter(read="0").values_list("image_ID__student_ID").distinct()
     student_videos = TeacherRVideo.objects.filter(read="0").values_list("video_ID__student_ID").distinct()
     student_videos = student_videos.union(student_images)
-    # print(student_ids)
+    print(student_videos)
+    print(len(student_videos))
 
     students = Student.objects.filter(
         student_class__class_ID=classe.ID,
@@ -837,6 +837,7 @@ def classe_addin_list(classe, student_list):
     ))
     for student in students:
         student_dict = {
+            "open_id": student.username,
             "student_id": student.last_name,
             "student_name": student.first_name,
             "read_msg": student.read_msg
@@ -863,6 +864,7 @@ def class2students(request):
     return JsonResponse({
         "status": 200,
         "place": place,
+        "invite_code": classe.end_time,
         "students": student_list
     })
 
@@ -953,6 +955,7 @@ def tea2stu2imgs(request):
     teacher_id = request.session.get('username')
     teacher = Teacher.objects.get(username=teacher_id)
     stu_id = request.POST.get('student_id')
+
     stu = Student.objects.get(username=stu_id)
     if stu is None:
         return JsonResponse({"status": 400})
@@ -1242,12 +1245,13 @@ def tea2hw2profile(request):
         else:
             teacher_status = 0
             tea_feedback = None
+        video_url = settings.POST_VIDEO_PATH + video.URL.rsplit('/')[-1]
         video_list.append({
             "video_id": video.ID,
             "student_name": student_name,
             "name": None,
             "subtime": video.post_time,
-            "URL": video.URL,
+            "URL": video_url,
             "error_video": video.error_video,
             "AI_status": video.AI_status,  # (1表示已评判)
             "AI_feedback": video.AI_feedback,
@@ -1265,12 +1269,13 @@ def tea2hw2profile(request):
         else:
             teacher_status = 0
             tea_feedback = None
+        img_url = settings.POST_IMG_PATH + image.URL.rsplit('/')[-1]
         image_list.append({
             "img_id": image.ID,
             "student_name": student_name,
             "name": None,
             "subtime": image.post_time,
-            "URL": image.URL,
+            "URL": img_url,
             "error_img": image.error_img,
             "AI_status": image.AI_status,  # (1表示已评判)
             "AI_feedback": image.AI_feedback,
@@ -1279,13 +1284,15 @@ def tea2hw2profile(request):
             "tag": image.tag
         })
     for file in files:
+        file_url = settings.SUB_HW_PATH + file.URL.rsplit('/')[-1]
         file_list.append({
             "file_id": file.ID,
             "student_name": file.init_name,
             "file_name": file.student.first_name + " " + homework.name,
-            "URL": get_post_url(file.URL, settings.SUB_HW_PATH),
+            "URL": file_url,
             "file_type": file.type
         })
+        print(f"fffffffffffffffffffffffffff{file_url}")
     return JsonResponse({"status": 200, "imgs": image_list, "videos": video_list, "files": file_list})
 
 
@@ -1381,9 +1388,9 @@ def stu2hw2profile(request):
 
 def stu2notice(request):
     notice_list = []
-    open_id = request.headers.get('')
     student_id = request.session.get("username")
-    if get_role(student_id) == 1:
+    user = User.objects.get(username=student_id)
+    if user.is_staff:
         class_id = request.POST.get('class_id')
         class_notice = Notice.objects.filter(class_ID=class_id)
         for notice in class_notice:
@@ -1478,7 +1485,8 @@ def redo(request):
 def student_get_material(request):
     file_list = []
     student_id = request.session.get("username")
-    if get_role(student_id) == 1:
+    user = User.objects.get(username=student_id)
+    if user.is_staff:
         class_id = request.POST.get('class_id')
         print("class_id")
         print(class_id)
@@ -1691,7 +1699,7 @@ def teaget_signprofile(request):
         try:
             studentSign = StudentSign.objects.get(student=student, sign=sign)
             result.append({
-                "student_username": student.last_name,
+                "student_username": student.username,
                 "student_name": student.first_name,
                 "state": studentSign.state,
                 "message": studentSign.message
@@ -1709,9 +1717,9 @@ def teaget_stufiles(request):
     hwfiles = HomeworkFile.objects.filter(student=stu).all()
     result = []
     for hwfile in hwfiles:
-        URL = settings.SUB_HW_PATH + time.strftime('%Y_%m_%d_%H_%M_%S') + "_" + hwfile.init_name
+        hw_url = settings.SUB_HW_PATH + hwfile.URL.rsplit('/')[-1]
         result.append({
-            "URL": URL,
+            "URL": hw_url,
             "file_name": stu.first_name + " " + hwfile.homework.name,
             "student_name": hwfile.init_name,
             "file_type": hwfile.type
@@ -1742,12 +1750,12 @@ def stu_sub_hw(request):
     student_id = request.session.get('username')
     homework_id = request.POST.get('homework_id')
     file = request.FILES.get('file')
-
+    stu = Student.objects.get(username=student_id)
     suffix = file.name.split('.')[-1]
-    file_name = f"{student_id}_{(datetime.now() + timedelta(hours=8)).strftime('%Y_%m_%d_%H_%M_%S')}.{suffix}"
+    file_name = f"{stu.last_name}_{(datetime.now() + timedelta(hours=8)).strftime('%Y_%m_%d_%H_%M_%S')}.{suffix}"
     # 存储图片在服务器本地
     dir = settings.SUB_HW_DIR + str(file_name)
-    init_name = f"{student_id}-{(datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')}.{suffix}"
+    init_name = f"{stu.last_name}-{(datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')}.{suffix}"
     destination = open(dir, 'wb+')
     for chunk in file.chunks():
         destination.write(chunk)
@@ -1911,11 +1919,10 @@ def stu_attend_class(request):
     try:
         classe = Class.objects.get(end_time=invite_code)
         stu = Student.objects.get(username=username)
-
-        try:
-            Student_class.objects.get(student_ID=stu, class_ID=classe)
+        num = Student_class.objects.filter(student_ID=stu).count()
+        if num > 0:
             return JsonResponse({"status": 400, "msg":"重复加入班级"})
-        except ObjectDoesNotExist:
+        else:
             student_class_instance = Student_class(class_ID=classe, student_ID=stu)
             student_class_instance.save()
             return JsonResponse({"status": 200})

@@ -1951,13 +1951,20 @@ def modify_personal_profile(request):
 
 def stu_drop_out_class(request):
     id = request.session.get("username")
-    class_id = request.POST.get("class_id")
-
-    stu = Student.objects.get(username=id)
-    classe = Class.objects.get(ID=class_id)
     try:
-        stu_class_instance = Student_class.objects.get(student_ID=stu, class_ID=classe)
-        stu_class_instance.delete()
+        stu = Student.objects.get(username=id)
+    except:
+        return JsonResponse({"status": 400, "msg": "找不到该学生"})
+    try:
+        student_classe = Student_class.objects.filter(student_ID=stu).first()
+        student_classe.delete()
         return JsonResponse({"status": 200})
     except ObjectDoesNotExist:
-        return JsonResponse({"status": 200, "msg": "找不到该班级"})
+        return JsonResponse({"status": 400, "msg": "找不到该班级"})
+
+
+def clear_student_info(request):
+    users_to_delete = User.objects.filter(username__startswith='delete_')
+    for user in users_to_delete:
+        user.delete()
+    return JsonResponse({"status": 200, "msg": "所有以 'delete_' 开头的用户已被成功清除"})

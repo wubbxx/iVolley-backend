@@ -1957,8 +1957,11 @@ def stu_drop_out_class(request):
         return JsonResponse({"status": 400, "msg": "找不到该学生"})
     try:
         student_classe = Student_class.objects.filter(student_ID=stu).first()
-        student_classe.delete()
-        return JsonResponse({"status": 200})
+        if Student_class.objects.filter(student_ID=stu).count() == 0:
+            return JsonResponse({"status": 400, "msg": "找不到该班级"})
+        else:
+            student_classe.delete()
+            return JsonResponse({"status": 200})
     except ObjectDoesNotExist:
         return JsonResponse({"status": 400, "msg": "找不到该班级"})
 

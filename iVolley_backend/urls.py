@@ -21,6 +21,7 @@ urlpatterns = [
     path("del_video/", delete_video),
     path("stuget_class_profile/", stuget_class_profile),
     path("stu_attend_class/", stu_attend_class),
+    path("stu_drop_out_class/", stu_drop_out_class),
     # ---------- 学生端 ↑ ------ 教师端 ↓ ---------#
     path("create_class/", create_class),  # 测试完成    v0.1版本
     path("tea2classes/", tea2classes),  # 测试完成

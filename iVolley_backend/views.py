@@ -1949,3 +1949,15 @@ def modify_personal_profile(request):
 
     return JsonResponse({"status": 200})
 
+def stu_drop_out_class(request):
+    id = request.session.get("username")
+    class_id = request.POST.get("class_id")
+
+    stu = Student.objects.get(username=id)
+    classe = Class.objects.get(ID=class_id)
+    try:
+        stu_class_instance = Student_class.objects.get(student_ID=stu, class_ID=classe)
+        stu_class_instance.delete()
+        return JsonResponse({"status": 200})
+    except ObjectDoesNotExist:
+        return JsonResponse({"status": 200, "msg": "找不到该班级"})

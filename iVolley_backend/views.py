@@ -119,6 +119,7 @@ def register(request):
     else:
         brand_new, user_id, password, school, name = tea_brand_new, tea_user_id, tea_password, tea_school, tea_name
     pattern = r"[^0-9a-zA-Z_]"
+    user_id = str(user_id)
     if re.search(pattern, user_id):
         return JsonResponse({"status": 900})
 
@@ -1949,3 +1950,19 @@ def modify_personal_profile(request):
 
     return JsonResponse({"status": 200})
 
+def stu_drop_out_class(request):
+    id = request.session.get("username")
+    stu = Student.objects.get(username=id)
+    try:
+        student_classe = Student_class.objects.filter(student_ID=stu).first()
+        student_classe.delete()
+        return JsonResponse({"status": 200})
+    except ObjectDoesNotExist:
+        return JsonResponse({"status": 200, "msg": "找不到该班级"})
+
+
+def clear_student_info(request):
+    users_to_delete = User.objects.filter(username__startswith='delete_')
+    for user in users_to_delete:
+        user.delete()
+    return JsonResponse({"status": 200, "msg": "所有以 'delete_' 开头的用户已被成功清除"})

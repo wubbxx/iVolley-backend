@@ -21,6 +21,7 @@ urlpatterns = [
     path("del_video/", delete_video),
     path("stuget_class_profile/", stuget_class_profile),
     path("stu_attend_class/", stu_attend_class),
+    path("stu_drop_out_class/", stu_drop_out_class),
     # ---------- 学生端 ↑ ------ 教师端 ↓ ---------#
     path("create_class/", create_class),  # 测试完成    v0.1版本
     path("tea2classes/", tea2classes),  # 测试完成
@@ -59,6 +60,7 @@ urlpatterns = [
     path("remote_dispatch/", RemoteDispatch),
     path("task_finish/", TaskFinished),
     path("tea_reset_pwd/", tea_reset_pwd),
+    path("clear_student_info/", clear_student_info)
     # path("wx_login/", wx_login),
     # path("test/", test_openid)
     # path("add_semester/", add_semester), 多余功能，直接在创建班级的时候默认创建学期就好

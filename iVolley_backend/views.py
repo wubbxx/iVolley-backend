@@ -1952,13 +1952,19 @@ def modify_personal_profile(request):
 
 def stu_drop_out_class(request):
     id = request.session.get("username")
-    stu = Student.objects.get(username=id)
+    try:
+        stu = Student.objects.get(username=id)
+    except:
+        return JsonResponse({"status": 400, "msg": "找不到该学生"})
     try:
         student_classe = Student_class.objects.filter(student_ID=stu).first()
-        student_classe.delete()
-        return JsonResponse({"status": 200})
+        if Student_class.objects.filter(student_ID=stu).count() == 0:
+            return JsonResponse({"status": 400, "msg": "找不到该班级"})
+        else:
+            student_classe.delete()
+            return JsonResponse({"status": 200})
     except ObjectDoesNotExist:
-        return JsonResponse({"status": 200, "msg": "找不到该班级"})
+        return JsonResponse({"status": 400, "msg": "找不到该班级"})
 
 
 def clear_student_info(request):
